@@ -2,10 +2,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>:root{--bg:#0b0b18}html,body{margin:0;height:100%;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden}
 canvas{width:min(100vw,calc(100vh*320/176));image-rendering:pixelated;image-rendering:crisp-edges}
-#t{display:none;position:fixed;bottom:6px;left:0;right:0;justify-content:space-between;padding:0 8px;pointer-events:none}
-#t div{display:flex;gap:5px;pointer-events:auto}#t b{width:40px;height:40px;border-radius:8px;background:#ffffff40;color:#fff;font:14px monospace;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none}</style></head><body>
+.pad{display:none;position:fixed;touch-action:none;user-select:none;z-index:10}
+.pad .grip{height:16px;background:#ffffff18;border-radius:10px 10px 0 0;text-align:center;line-height:16px;font-size:9px;color:#fff6;letter-spacing:3px;cursor:grab}
+.pad .body{padding:8px;background:#00000050;border-radius:0 0 12px 12px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.pad b{width:50px;height:50px;border-radius:12px;background:#ffffff30;color:#fff;font:18px monospace;display:flex;align-items:center;justify-content:center;touch-action:none;transition:background .08s}
+.pad b:active{background:#ffffff60}
+#dpad .body{display:grid;grid-template-columns:50px 50px 50px;grid-template-rows:50px 50px 50px;gap:4px}
+#dpad .u{grid-column:2;grid-row:1}#dpad .l{grid-column:1;grid-row:2}#dpad .r{grid-column:3;grid-row:2}#dpad .d{grid-column:2;grid-row:3}
+#dpad .c{grid-column:2;grid-row:2;background:#ffffff10;border-radius:12px}
+#act .body{display:grid;grid-template-columns:50px 50px;gap:4px}</style></head><body>
 <canvas id="c"></canvas>
-<div id="t"><div><b data-k="ArrowLeft">◀</b><b data-k="ArrowRight">▶</b><b data-k="ArrowUp">▲</b></div><div><b data-k="Digit1">1</b><b data-k="Digit2">2</b><b data-k="Digit3">3</b><b data-k="Digit4">4</b><b data-k="Space">⤒</b></div></div>
+<div id="dpad" class="pad"><div class="grip">···</div><div class="body"><b class="u" data-k="ArrowUp">▲</b><b class="l" data-k="ArrowLeft">◀</b><b class="c"></b><b class="r" data-k="ArrowRight">▶</b><b class="d" data-k="ArrowDown">▼</b></div></div>
+<div id="act" class="pad"><div class="grip">···</div><div class="body"><b data-k="Digit1" style="color:#6fd05a">1</b><b data-k="Digit2" style="color:#ffb03a">2</b><b data-k="Digit3" style="color:#e8702f">3</b><b data-k="Digit4" style="color:#9fe0ff">4</b><b data-k="Space" style="grid-column:span 2;width:auto">JUMP</b></div></div>
 <script>
 const cv=document.getElementById('c'),g=cv.getContext('2d');cv.width=320;cv.height=176;g.imageSmoothingEnabled=false;
 const S=8,VW=320,VH=176,R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x|0,y|0,w,h)};
@@ -39,7 +47,13 @@ const BM=[[330,0,392,0,440,392,330,294],[131,0,0,196,0,0,165,0],[330,392,440,523
 function bgm(){if(mute||T%12)return;bgmI++;let mi=0;if(ST=='title'||ST=='intro')mi=0;else if(ST=='play'||ST=='pause')mi=L?[1,2,3,4,5][L.th]||1:1;else if(ST=='twist'||ST=='end')mi=6;else return;const ml=BM[mi*2],bl=BM[mi*2+1],i=bgmI%8;if(ml[i])pN(ml[i],.22,'square',.012);if(bl[i])pN(bl[i],.35,'triangle',.018)}
 onkeydown=e=>{if(!e.repeat)hit[e.code]=1;K[e.code]=1;if(e.code=='Space'||e.code.startsWith('Arrow'))e.preventDefault()};onkeyup=e=>K[e.code]=0;
 cv.onpointerdown=()=>{hit.Enter=1};
-if('ontouchstart'in window){document.getElementById('t').style.display='flex';document.querySelectorAll('#t b').forEach(b=>{const k=b.dataset.k;b.onpointerdown=e=>{e.preventDefault();K[k]=1;hit[k]=1;hit.Enter=1};b.onpointerup=b.onpointerleave=()=>K[k]=0})}
+if('ontouchstart'in window){document.querySelectorAll('.pad').forEach(pad=>{pad.style.display='block';const grip=pad.querySelector('.grip');let dx=0,dy=0,dragging=false;
+grip.onpointerdown=e=>{e.preventDefault();dragging=true;const r=pad.getBoundingClientRect();dx=e.clientX-r.left;dy=e.clientY-r.top;grip.setPointerCapture(e.pointerId)};
+grip.onpointermove=e=>{if(!dragging)return;pad.style.left=Math.max(0,e.clientX-dx)+'px';pad.style.top=Math.max(0,e.clientY-dy)+'px';pad.style.bottom='auto';pad.style.right='auto'};
+grip.onpointerup=grip.onpointercancel=()=>dragging=false});
+document.getElementById('dpad').style.left='8px';document.getElementById('dpad').style.bottom='12px';
+document.getElementById('act').style.right='8px';document.getElementById('act').style.bottom='12px';
+document.querySelectorAll('.pad b[data-k]').forEach(b=>{const k=b.dataset.k;b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();K[k]=1;hit[k]=1;hit.Enter=1};b.onpointerup=b.onpointerleave=e=>{e.stopPropagation();K[k]=0}})}
 function load(i){lvl=i;L=LV[i];gw=L.w;grid=[];for(let y=0;y<22;y++)grid.push(Array(gw).fill('.'));
 L.c.forEach(([ch,x,y,w,h])=>{for(let j=0;j<h;j++)for(let k=0;k<w;k++)grid[y+j][x+k]=ch});
 p={x:L.s[0]*S+1,y:L.s[1]*S,vx:0,vy:0,w:6,h:12,f:1,gr:0,cl:0,coy:0,buf:0,nc:0,gl:0,castT:0,castS:0,landT:0,dead:0,win:0,t:0,st:'idle'};
